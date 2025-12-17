@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YouTube V9.0 - SuperVIP Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+
+    <style>
+        /* =========================================
+           1. CORE VARIABLES & RESET
+           ========================================= */
+        :root {
+            --bg-base: #0f0f0f;
+            --bg-secondary: #1f1f1f;
+            --bg-hover: #272727;
+            --bg-active: #3f3f3f;
+            --text-primary: #f1f1f1;
+            --text-secondary: #aaaaaa;
+            --accent: #3ea6ff;
+            
+            /* Dimensions */
+            --header-h: 56px;
+            --sidebar-w: 240px;      /* Expanded Width */
+            --sidebar-mini-w: 72px;  /* Collapsed Width */
+            --bottom-nav-h: 50px;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { 
+            margin: 0; font-family: 'Roboto', sans-serif; 
+            background: var(--bg-base); color: var(--text-primary); 
+            overflow-x: hidden; 
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #717171; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+
+        /* Animation: Ripple */
+        .ripple { position: relative; overflow: hidden; }
+        .ripple-effect {
+            position: absolute; border-radius: 50%; background: rgba(255,255,255,0.15);
+            transform: scale(0); animation: ripple 0.6s linear; pointer-events: none;
+        }
+        @keyframes ripple { to { transform: scale(4); opacity: 0; } }
+
+        /* Animation: Skeleton Shimmer */
+        @keyframes shimmer { 
+            0% { background-color: #1f1f1f; } 
+            50% { background-color: #303030; } 
+            100% { background-color: #1f1f1f; } 
+        }
+        .skeleton { animation: shimmer 1.5s infinite; background: var(--bg-secondary); border-radius: 4px; }
+
+        /* =========================================
+           2. HEADER
+           ========================================= */
+        header {
+            display: flex; align-items: center; justify-content: space-between; 
+            height: var(--header-h); padding: 0 16px; position: fixed; top: 0; left: 0; right: 0; 
+            background: rgba(15,15,15,0.98); backdrop-filter: blur(10px); z-index: 1000;
+        }
+        .start { display: flex; align-items: center; gap: 16px; }
+        .center { flex: 0 1 700px; display: flex; justify-content: center; margin: 0 20px; }
+        .end { display: flex; align-items: center; gap: 8px; }
+
+        .menu-btn { 
+            padding: 8px; border-radius: 50%; cursor: pointer; background: transparent; border: none; color: white; 
+            display: flex; justify-content: center; align-items: center;
+        }
+        .menu-btn:hover { background: var(--bg-hover); }
+
+        .logo { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        .logo span { font-size: 18px; font-weight: 700; letter-spacing: -1px; }
+
+        .search-box { display: flex; background: #121212; border: 1px solid #333; border-radius: 40px; width: 100%; max-width: 600px; height: 40px; overflow: hidden; }
+        .search-box input { flex: 1; background: transparent; border: none; color: white; padding: 0 16px; font-size: 16px; }
+        .search-box button { width: 60px; background: #222; border: none; border-left: 1px solid #333; color: #aaa; cursor: pointer; }
+
+        .icon-btn { padding: 8px; border-radius: 50%; cursor: pointer; background: transparent; border: none; color: white; }
+        .icon-btn:hover { background: var(--bg-hover); }
+
+        /* =========================================
+           3. SMART SIDEBAR (V8 Logic)
+           ========================================= */
+        .sidebar {
+            position: fixed; top: var(--header-h); left: 0; bottom: 0;
+            width: var(--sidebar-w); background: var(--bg-base);
+            padding: 12px; display: flex; flex-direction: column; overflow-y: auto; z-index: 900;
+            transition: width 0.15s ease-in-out; /* Smooth transition */
+        }
+        
+        .nav-item {
+            display: flex; align-items: center; cursor: pointer; border-radius: 10px; color: white;
+            transition: 0.1s; margin-bottom: 4px;
+        }
+        .nav-item:hover { background: var(--bg-hover); }
+        .nav-item .material-icons { font-size: 24px; }
+        
+        /* State 1: Expanded (Default) */
+        .sidebar .nav-item { flex-direction: row; height: 40px; padding: 0 12px; gap: 24px; }
+        .sidebar .nav-item span { font-size: 14px; font-weight: 500; white-space: nowrap; }
+        
+        /* State 2: Collapsed (Mini) */
+        body.mini-sidebar .sidebar { width: var(--sidebar-mini-w); padding: 4px; }
+        body.mini-sidebar .sidebar .nav-item {
+            flex-direction: column; justify-content: center; height: 74px; gap: 6px; padding: 0;
+        }
+        body.mini-sidebar .sidebar .nav-item span { font-size: 14px; width: 100%; text-align: center; }
+        body.mini-sidebar .hide-on-mini { display: none; }
+
+        /* Mobile Bottom Nav */
+        .bottom-nav {
+            display: none; position: fixed; bottom: 0; left: 0; right: 0; height: var(--bottom-nav-h);
+            background: var(--bg-base); border-top: 1px solid #333; z-index: 1000; justify-content: space-around; align-items: center; padding-bottom: safe-area-inset-bottom;
+        }
+        .b-item { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; color: white; gap: 4px; }
+        .b-item span { font-size: 10px; }
+
+        /* =========================================
+           4. MAIN CONTENT WRAPPERS
+           ========================================= */
+        .main-container {
+            margin-top: var(--header-h);
+            margin-left: var(--sidebar-w);
+            padding: 24px;
+            transition: margin-left 0.15s ease-in-out;
+        }
+        body.mini-sidebar .main-container { margin-left: var(--sidebar-mini-w); }
+
+        /* =========================================
+           5. HOME VIEW (V5 & V7 Features)
+           ========================================= */
+        #home-view { display: block; }
+
+        /* Sticky Chips */
+        .chips-sticky {
+            position: sticky; top: var(--header-h); z-index: 800; background: var(--bg-base);
+            padding: 12px 0; margin: -12px -24px 24px -24px; display: flex; align-items: center;
+        }
+        .chips-sticky::before, .chips-sticky::after { content: ''; position: absolute; top: 0; bottom: 0; width: 40px; pointer-events: none; }
+        .chips-sticky::before { left: 0; background: linear-gradient(to right, var(--bg-base), transparent); }
+        .chips-sticky::after { right: 0; background: linear-gradient(to left, var(--bg-base), transparent); }
+        
+        .chips-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 0 24px; scrollbar-width: none; }
+        .chip { background: var(--bg-hover); border: none; color: white; padding: 6px 12px; border-radius: 8px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: 0.2s; }
+        .chip.active { background: white; color: black; }
+
+        /* Shorts Shelf */
+        .shorts-section { margin-bottom: 40px; }
+        .shelf-title { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+        .shorts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+        .short-card { position: relative; aspect-ratio: 9/16; border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
+        .short-card:hover { transform: scale(1.02); z-index: 2; }
+        .short-card img { width: 100%; height: 100%; object-fit: cover; }
+        .short-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); }
+        .short-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-shadow: 0 1px 2px black;}
+
+        /* Video Grid */
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px 16px; }
+        .video-card { cursor: pointer; display: flex; flex-direction: column; gap: 10px; }
+        .thumb { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; background: #222; }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s; }
+        .video-card:hover .thumb img { transform: scale(1.05); }
+        .duration { position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.8); padding: 2px 4px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+        .meta { display: flex; gap: 12px; }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; background: #333; flex-shrink: 0; background-size: cover; }
+        .info h3 { margin: 0 0 4px 0; font-size: 16px; font-weight: 500; line-height: 22px; color: var(--text-primary); }
+        .info p { margin: 0; font-size: 14px; color: var(--text-secondary); }
+
+        /* Skeleton Styles */
+        .sk-thumb { width: 100%; aspect-ratio: 16/9; border-radius: 12px; }
+        .sk-avatar { width: 36px; height: 36px; border-radius: 50%; }
+        .sk-text { height: 16px; border-radius: 4px; margin-bottom: 6px; }
+        .sk-short { width: 100%; aspect-ratio: 9/16; border-radius: 12px; }
+
+        /* =========================================
+           6. WATCH VIEW (V6 Logic)
+           ========================================= */
+        #watch-view { display: none; margin-left: auto; margin-right: auto; max-width: 1750px; }
+        
+        /* Grid Layout 70/30 */
+        .watch-layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 24px; }
+        
+        .primary-col { width: 100%; }
+        
+        /* Cinematic Ambient Mode */
+        .cinema-mode { position: relative; width: 100%; margin-bottom: 12px; }
+        .ambient-glow {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--glow-color, rgba(255,255,255,0.05));
+            filter: blur(80px); opacity: 0.6; z-index: -1; transition: background 1s ease;
+        }
+        .player-wrapper { width: 100%; aspect-ratio: 16/9; background: black; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        video { width: 100%; height: 100%; }
+
+        .v-header { margin-bottom: 12px; }
+        .v-title { font-size: 20px; font-weight: 700; margin: 12px 0; }
+        .v-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .channel-info { display: flex; align-items: center; gap: 12px; }
+        .sub-btn { background: var(--text-primary); color: black; border: none; padding: 0 16px; height: 36px; border-radius: 18px; font-weight: 600; cursor: pointer; }
+        .sub-btn:hover { background: #e0e0e0; }
+        .action-btns { display: flex; gap: 8px; }
+        .pill-btn { background: var(--bg-hover); color: white; border: none; height: 36px; padding: 0 16px; border-radius: 18px; display: flex; align-items: center; gap: 6px; font-weight: 500; cursor: pointer; font-size: 14px;}
+        .pill-btn:hover { background: var(--bg-active); }
+
+        /* Interactive Description */
+        .desc-box { background: #2a2a2a; border-radius: 12px; padding: 12px; margin-bottom: 24px; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+        .desc-box:hover { background: #333; }
+        .desc-text { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 20px; }
+        .desc-text.expanded { -webkit-line-clamp: unset; display: block; }
+        .more-btn { font-weight: 600; margin-top: 4px; display: block; }
+
+        .comments-section { margin-top: 24px; }
+        .add-comment { display: flex; gap: 16px; margin-bottom: 24px; }
+        .comment-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid #333; color: white; padding: 8px 0; transition: 0.2s; }
+        .comment-input:focus { border-bottom: 2px solid white; }
+        .comment-item { display: flex; gap: 16px; margin-bottom: 20px; }
+        .c-body { font-size: 14px; line-height: 20px; }
+        
+        /* Sticky Up Next Sidebar */
+        .secondary-col { width: 400px; }
+        .sticky-wrapper { position: sticky; top: 80px; }
+        .rec-item { display: flex; gap: 8px; margin-bottom: 10px; cursor: pointer; }
+        .rec-thumb { width: 168px; height: 94px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #333; }
+        .rec-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .rec-info h4 { margin: 0 0 4px 0; font-size: 14px; font-weight: 500; line-height: 20px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* =========================================
+           7. RESPONSIVE LOGIC
+           ========================================= */
+        @media (max-width: 1000px) {
+            .watch-layout { grid-template-columns: 1fr; }
+            .secondary-col { width: 100%; margin-top: 24px; }
+            .sticky-wrapper { position: static; }
+            .rec-thumb { width: 160px; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .bottom-nav { display: flex; }
+            .menu-btn { display: none; }
+            
+            .main-container { margin-left: 0 !important; padding: 12px; padding-bottom: 60px; }
+            .search-box, .mic-btn { display: none; }
+            .logo { flex: 1; }
+            
+            /* Home Adjustments */
+            .chips-sticky { top: 56px; margin: -12px -12px 16px -12px; }
+            .shorts-grid { display: flex; overflow-x: auto; gap: 12px; padding-bottom: 10px; }
+            .short-card { min-width: 140px; }
+            
+            /* Watch Adjustments */
+            #watch-view { margin-top: 0; }
+            .player-wrapper { border-radius: 0; margin-left: -12px; margin-right: -12px; width: calc(100% + 24px); }
+            .ambient-glow { display: none; }
+            .v-title, .desc-box, .comments-section { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="start">
+            <button class="menu-btn ripple" id="toggleBtn"><span class="material-icons">menu</span></button>
+            <div class="logo" onclick="goHome()">
+                <span class="material-icons" style="color: red; font-size: 30px;">play_circle_filled</span>
+                <span>YouTube</span>
+            </div>
+        </div>
+        <div class="center">
+            <div class="search-box">
+                <input type="text" placeholder="Search">
+                <button><span class="material-icons">search</span></button>
+            </div>
+            <button class="icon-btn mic-btn" style="background:#181818; margin-left:12px;"><span class="material-icons">mic</span></button>
+        </div>
+        <div class="end">
+            <button class="icon-btn"><span class="material-icons">search</span></button>
+            <button class="icon-btn"><span class="material-icons">video_call</span></button>
+            <button class="icon-btn"><span class="material-icons">notifications</span></button>
+            <div class="icon-btn" style="width:32px; height:32px; background:purple; padding:0; text-align:center; line-height:32px; font-weight:bold;">Y</div>
+        </div>
+    </header>
+
+    <nav class="sidebar">
+        <div class="nav-item ripple" onclick="goHome()"><span class="material-icons">home</span><span>Home</span></div>
+        <div class="nav-item ripple"><span class="material-icons">explore</span><span>Shorts</span></div>
+        <div class="nav-item ripple"><span class="material-icons">subscriptions</span><span>Subscriptions</span></div>
+        <hr class="hide-on-mini" style="border:0; border-top:1px solid #333; margin:10px 0; width:100%;">
+        <div class="nav-item ripple"><span class="material-icons">video_library</span><span>Library</span></div>
+        <div class="nav-item ripple hide-on-mini"><span class="material-icons">history</span><span>History</span></div>
+    </nav>
+
+    <nav class="bottom-nav">
+        <div class="b-item ripple" onclick="goHome()"><span class="material-icons">home</span><span>Home</span></div>
+        <div class="b-item ripple"><span class="material-icons">explore</span><span>Shorts</span></div>
+        <div class="b-item ripple"><span class="material-icons" style="font-size:32px;">add_circle</span></div>
+        <div class="b-item ripple"><span class="material-icons">subscriptions</span><span>Subs</span></div>
+        <div class="b-item ripple"><span class="material-icons">video_library</span><span>You</span></div>
+    </nav>
+
+    <div class="main-container">
+        
+        <div id="home-view">
+            <div class="chips-sticky">
+                <div class="chips-scroll" id="chips-container">
+                    </div>
+            </div>
+
+            <div class="shorts-section">
+                <div class="shelf-title">
+                    <span class="material-symbols-outlined" style="color:red">slow_motion_video</span> Shorts
+                </div>
+                <div class="shorts-grid" id="shorts-grid">
+                    </div>
+            </div>
+
+            <div class="video-grid" id="main-grid">
+                </div>
+        </div>
+
+        <div id="watch-view">
+            <div class="watch-layout">
+                <div class="primary-col">
+                    <div class="cinema-mode">
+                        <div class="ambient-glow" id="ambient-bg"></div>
+                        <div class="player-wrapper">
+                            <video id="player" controls playsinline>
+                                <source src="" type="video/mp4">
+                            </video>
+                        </div>
+                    </div>
+
+                    <div class="v-header">
+                        <h1 class="v-title" id="w-title">Title</h1>
+                        <div class="v-toolbar">
+                            <div class="channel-info">
+                                <div class="avatar" id="w-avatar" style="width:40px; height:40px;"></div>
+                                <div>
+                                    <h4 id="w-channel" style="margin:0; font-size:16px;">Channel</h4>
+                                    <span style="font-size:12px; color:#aaa;">1.2M subs</span>
+                                </div>
+                                <button class="sub-btn ripple">Subscribe</button>
+                            </div>
+                            <div class="action-btns">
+                                <button class="pill-btn ripple"><span class="material-icons">thumb_up</span> 15K</button>
+                                <button class="pill-btn ripple"><span class="material-icons">share</span> Share</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="desc-box" onclick="toggleDesc()">
+                        <div class="desc-text" id="w-desc">
+                            Description goes here...
+                        </div>
+                        <span class="more-btn" id="desc-btn">...more</span>
+                    </div>
+
+                    <div class="comments-section">
+                        <h3 style="font-size:18px;">Comments</h3>
+                        <div class="add-comment">
+                            <div class="avatar" style="background:purple; text-align:center; line-height:36px; color:white;">Y</div>
+                            <input type="text" class="comment-input" placeholder="Add a comment...">
+                        </div>
+                        <div id="comments-list"></div>
+                    </div>
+                </div>
+
+                <div class="secondary-col">
+                    <div class="sticky-wrapper" id="rec-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* =========================================
+           8. JAVASCRIPT LOGIC
+           ========================================= */
+        
+        // --- 1. DATA ---
+        const sampleVideo = "https://www.w3schools.com/html/mov_bbb.mp4";
+        const videos = [
+            { id: 1, title: "Đàu tư HPDE là ngon luôn", channel: "Dev Mastery", views: "2M", time: "2 days ago", thumb: "https://picsum.photos/id/10/640/360", avatar: "https://picsum.photos/id/10/50/50", color: "#2d3e50" },
+            { id: 2, title: "Lofi Hip Hop Radio - Beats to Relax", channel: "Lofi Girl", views: "Live", time: "LIVE", thumb: "https://picsum.photos/id/11/640/360", avatar: "https://picsum.photos/id/11/50/50", color: "#6e4a5a" },
+            { id: 3, title: "Top 10 Places to Visit 2025", channel: "Travel Hub", views: "500K", time: "5 hours ago", thumb: "https://picsum.photos/id/12/640/360", avatar: "https://picsum.photos/id/12/50/50", color: "#3b6e4a" },
+            { id: 4, title: "Cyberpunk City Ambience 4K", channel: "Neon Dreams", views: "1.2M", time: "1 week ago", thumb: "https://picsum.photos/id/13/640/360", avatar: "https://picsum.photos/id/13/50/50", color: "#5e2d6e" },
+            { id: 5, title: "Javascript Crash Course", channel: "Code Fast", views: "800K", time: "3 days ago", thumb: "https://picsum.photos/id/14/640/360", avatar: "https://picsum.photos/id/14/50/50", color: "#6e2d2d" },
+            { id: 6, title: "Funny Cat Compilation", channel: "Meow TV", views: "10M", time: "1 month ago", thumb: "https://picsum.photos/id/15/640/360", avatar: "https://picsum.photos/id/15/50/50", color: "#6e4a2d" },
+            { id: 7, title: "Nature Documentary 8K", channel: "Earth", views: "5M", time: "1 year ago", thumb: "https://picsum.photos/id/16/640/360", avatar: "https://picsum.photos/id/16/50/50", color: "#2d5e3b" },
+            { id: 8, title: "Street Food Tour Vietnam", channel: "Foodie", views: "3M", time: "2 weeks ago", thumb: "https://picsum.photos/id/17/640/360", avatar: "https://picsum.photos/id/17/50/50", color: "#8e5a2d" }
+        ];
+
+        const shorts = Array(5).fill(0).map((_, i) => ({
+            title: "Viral Short Video #"+(i+1), views: "1M views", thumb: `https://picsum.photos/id/${100+i}/360/640`
+        }));
+
+        const comments = [
+            { user: "User 1", time: "2 hours ago", text: "This ambient mode is sick!", avatar: "https://picsum.photos/id/64/50/50" },
+            { user: "User 2", time: "5 hours ago", text: "The sidebar toggle is so smooth.", avatar: "https://picsum.photos/id/65/50/50" }
+        ];
+
+        // --- 2. HELPERS (Skeleton) ---
+        const getSkelVideo = () => `
+            <div class="video-card">
+                <div class="skeleton sk-thumb"></div>
+                <div class="meta">
+                    <div class="skeleton sk-avatar"></div>
+                    <div style="flex:1">
+                        <div class="skeleton sk-text" style="width:90%"></div>
+                        <div class="skeleton sk-text" style="width:60%"></div>
+                    </div>
+                </div>
+            </div>`;
+        const getSkelShort = () => `<div class="skeleton sk-short"></div>`;
+
+        // --- 3. INIT & RENDER ---
+        const chipsContainer = document.getElementById('chips-container');
+        const mainGrid = document.getElementById('main-grid');
+        const shortsGrid = document.getElementById('shorts-grid');
+        const homeView = document.getElementById('home-view');
+        const watchView = document.getElementById('watch-view');
+        const player = document.getElementById('player');
+
+        function init() {
+            // Chips
+            const chips = ["All", "Gaming", "Music", "Live", "Computers", "Programming", "Podcasts", "News"];
+            chipsContainer.innerHTML = chips.map((c,i) => `<button class="chip ${i===0?'active':''} ripple">${c}</button>`).join('');
+
+            // Skeletons
+            mainGrid.innerHTML = Array(8).fill(getSkelVideo()).join('');
+            shortsGrid.innerHTML = Array(6).fill(getSkelShort()).join('');
+
+            // Load Data Delay
+            setTimeout(() => {
+                // Render Shorts
+                shortsGrid.innerHTML = shorts.map(s => `
+                    <div class="short-card ripple">
+                        <img src="${s.thumb}" loading="lazy">
+                        <div class="short-overlay">
+                            <div class="short-title">${s.title}</div>
+                            <div style="font-size:12px; font-weight:500">${s.views}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Render Videos
+                mainGrid.innerHTML = videos.map((v, i) => `
+                    <div class="video-card ripple" onclick="openWatch(${i})">
+                        <div class="thumb">
+                            <img src="${v.thumb}" loading="lazy">
+                            <span class="duration">${v.time==='LIVE'?'LIVE':'12:45'}</span>
+                        </div>
+                        <div class="meta">
+                            <div class="avatar" style="background-image:url(${v.avatar})"></div>
+                            <div class="info">
+                                <h3>${v.title}</h3>
+                                <p>${v.channel}</p>
+                                <p>${v.views} • ${v.time}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }, 1500);
+        }
+
+        // --- 4. NAVIGATION LOGIC ---
+        function goHome() {
+            watchView.style.display = 'none';
+            homeView.style.display = 'block';
+            player.pause();
+            window.scrollTo(0,0);
+        }
+
+        function openWatch(index) {
+            const v = videos[index];
+            homeView.style.display = 'none';
+            watchView.style.display = 'block';
+            window.scrollTo(0,0);
+
+            // Populate Data
+            player.src = sampleVideo;
+            player.play();
+            document.getElementById('w-title').innerText = v.title;
+            document.getElementById('w-channel').innerText = v.channel;
+            document.getElementById('w-avatar').style.backgroundImage = `url(${v.avatar})`;
+            document.getElementById('w-desc').innerHTML = `Watching <b>${v.title}</b>.<br>This is the description box with expandable text.<br>Color theme: ${v.color}`;
+            
+            // Ambient Mode
+            document.getElementById('ambient-bg').style.backgroundColor = v.color;
+
+            // Rec List
+            document.getElementById('rec-list').innerHTML = videos.map((item, i) => `
+                <div class="rec-item ripple" onclick="openWatch(${i})">
+                    <div class="rec-thumb"><img src="${item.thumb}"></div>
+                    <div class="rec-info">
+                        <h4>${item.title}</h4>
+                        <p>${item.channel}</p>
+                        <p>${item.views}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            // Comments
+            document.getElementById('comments-list').innerHTML = comments.map(c => `
+                <div class="comment-item">
+                    <div class="avatar" style="background-image:url(${c.avatar})"></div>
+                    <div class="c-body">
+                        <div style="margin-bottom:4px;">
+                            <span style="font-weight:600; font-size:13px; margin-right:4px;">${c.user}</span>
+                            <span style="color:#aaa; font-size:12px;">${c.time}</span>
+                        </div>
+                        <div>${c.text}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- 5. SIDEBAR TOGGLE ---
+        const toggleBtn = document.getElementById('toggleBtn');
+        toggleBtn.addEventListener('click', () => {
+            document.body.classList.toggle('mini-sidebar');
+        });
+
+        // --- 6. INTERACTIONS ---
+        function toggleDesc() {
+            const t = document.getElementById('w-desc');
+            const b = document.getElementById('desc-btn');
+            t.classList.toggle('expanded');
+            b.innerText = t.classList.contains('expanded') ? 'Show less' : '...more';
+        }
+
+        // Ripple Effect
+        document.addEventListener('mousedown', e => {
+            const btn = e.target.closest('.ripple');
+            if(btn) {
+                const rect = btn.getBoundingClientRect();
+                const c = document.createElement('span');
+                const d = Math.max(rect.width, rect.height);
+                c.classList.add('ripple-effect');
+                c.style.width = c.style.height = `${d}px`;
+                c.style.left = `${e.clientX - rect.left - d/2}px`;
+                c.style.top = `${e.clientY - rect.top - d/2}px`;
+                btn.appendChild(c);
+                setTimeout(() => c.remove(), 600);
+            }
+        });
+
+        // Run
+        init();
+    </script>
+</body>
+</html>
